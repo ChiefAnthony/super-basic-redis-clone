@@ -1,40 +1,7 @@
 import socket
 import select
 
-
-def parse_redis_message(data):
-    parts = data.split(b"\r\n")
-    if not parts[0].startswith(b"*"):
-        return None
-
-    # Skip the first line which has the number of arguments
-    args = []
-    i = 1
-    while i < len(parts):
-        if parts[i].startswith(b"$"):
-            length = int(parts[i][1:])
-            arg = parts[i + 1][:length]
-            args.append(arg.decode("utf-8"))
-            i += 2
-        else:
-            i += 1
-    return args
-
-
-def handle_conn(data):
-    args = parse_redis_message(data)
-    if not args:
-        return None
-
-    # Check for ECHO command
-    if args[0].upper() == "ECHO" and len(args) == 2:
-        response = args[1]
-        return f"${len(response)}\r\n{response}\r\n".encode()
-
-    elif args[0].upper() == "PING" and len(args) == 1:
-        return b"+PONG\r\n"
-
-    return b"-ERR unknown command\r\n"
+from app.resp_handler import handle_conn
 
 
 def main():
