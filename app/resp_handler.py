@@ -1,3 +1,6 @@
+import time
+
+
 def parse_redis_message(data):
     parts = data.split(b"\r\n")
     if not parts[0].startswith(b"*"):
@@ -18,6 +21,7 @@ def parse_redis_message(data):
 
 
 data_store = {}
+expiry_store = {}
 
 
 def handle_conn(data):
@@ -33,16 +37,28 @@ def handle_conn(data):
     elif args[0].upper() == "PING" and len(args) == 1:
         return b"+PONG\r\n"
 
-    elif args[0].upper() == "SET" and len(args) == 3:
+    elif args[0].upper() == "SET" and (len(args) == 3 or len(args) == 5):
         key = args[1]
         value = args[2]
         data_store[key] = value
+        if len(args) == 5 and args[3].upper() == "PX":
+            expiry_value = args[4]
+            expiry_store[key] = time.time() * 1000 + int(expiry_value)
         return b"+OK\r\n"
 
     elif args[0].upper() == "GET" and len(args) == 2:
-        response = data_store.get(args[1])
+        key = args[1]
+        response = data_store.get(key)
+
         if response is None:
-            return "$-1\r\n"
+            return b"$-1\r\n"
+
+        if key in expiry_store:
+            if time.time() * 1000 > expiry_store[key]:
+                del data_store[key]
+                del expiry_store[key]
+                return b"$-1\r\n"
+
         return f"${len(response)}\r\n{response}\r\n".encode()
 
     return b"-ERR unknown command\r\n"
