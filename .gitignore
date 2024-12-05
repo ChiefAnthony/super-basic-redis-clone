@@ -2,6 +2,10 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.codecrafters
+.git
+.codecrafters.yml
+.yml
 
 # C extensions
 *.so
